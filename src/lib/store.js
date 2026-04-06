@@ -28,6 +28,16 @@ export async function getRecentPapers() {
   return (await store.get('recent_papers')) || [];
 }
 
+export async function getFontSize() {
+  const store = await getStore();
+  return (await store.get('font_size')) || null;
+}
+
+export async function setFontSize(size) {
+  const store = await getStore();
+  await store.set('font_size', size);
+}
+
 export async function addRecentPaper({ folderPath, title }) {
   const store = await getStore();
   const recent = (await store.get('recent_papers')) || [];

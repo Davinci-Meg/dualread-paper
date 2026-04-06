@@ -4,8 +4,10 @@
 // ============================================================
 
 import { el, esc, cap } from '../lib/converter.js';
+import { getFontSize, setFontSize } from '../lib/store.js';
 
 let paperData = null;
+let currentFontSize = 16;
 let selectedId = null;
 let sentenceMap = {};
 let sentenceIds = [];
@@ -41,13 +43,35 @@ export function renderReader(container, data, onBack) {
   const main = el('div', 'main-panel');
   main.id = 'mainPanel';
 
-  // Back button
+  // Toolbar (back button + font size controls)
+  const toolbar = el('div', 'reader-toolbar');
+
   if (onBack) {
     const backBtn = el('button', 'back-btn');
     backBtn.innerHTML = '&larr; ライブラリ';
     backBtn.addEventListener('click', onBack);
-    main.appendChild(backBtn);
+    toolbar.appendChild(backBtn);
   }
+
+  const fontControls = el('div', 'font-controls');
+  const btnMinus = el('button', 'font-btn');
+  btnMinus.textContent = 'A-';
+  const btnReset = el('button', 'font-btn');
+  btnReset.textContent = 'A';
+  const btnPlus = el('button', 'font-btn');
+  btnPlus.textContent = 'A+';
+
+  btnMinus.addEventListener('click', () => changeFontSize(-1));
+  btnReset.addEventListener('click', () => changeFontSize(0));
+  btnPlus.addEventListener('click', () => changeFontSize(1));
+  fontControls.append(btnMinus, btnReset, btnPlus);
+  toolbar.appendChild(fontControls);
+  main.appendChild(toolbar);
+
+  // Apply saved font size
+  getFontSize().then(size => {
+    if (size) { currentFontSize = size; applyFontSize(); }
+  });
 
   const hdr = el('div', 'paper-header');
   const m = data.metadata || {};
@@ -271,6 +295,22 @@ function matchTerms(s) {
   return glossary.filter(g => t.includes(g.en.toLowerCase()));
 }
 
+function changeFontSize(delta) {
+  if (delta === 0) {
+    currentFontSize = 16;
+  } else {
+    currentFontSize = Math.max(12, Math.min(24, currentFontSize + delta));
+  }
+  applyFontSize();
+  setFontSize(currentFontSize);
+}
+
+function applyFontSize() {
+  document.querySelectorAll('.section-body').forEach(el => {
+    el.style.fontSize = currentFontSize + 'px';
+  });
+}
+
 function setupDivider(div, side) {
   let d = false;
   div.addEventListener('mousedown', e => {
@@ -282,7 +322,8 @@ function setupDivider(div, side) {
   });
   document.addEventListener('mousemove', e => {
     if (!d) return;
-    side.style.width = Math.max(280, Math.min(600, document.body.clientWidth - e.clientX - 2)) + 'px';
+    const half = Math.floor(document.body.clientWidth / 2);
+    side.style.width = Math.max(280, Math.min(half, document.body.clientWidth - e.clientX - 2)) + 'px';
   });
   document.addEventListener('mouseup', () => {
     if (d) {
