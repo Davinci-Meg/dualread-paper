@@ -40,6 +40,15 @@ export function renderReader(container, data, onBack) {
   container.innerHTML = '';
   container.classList.add('app');
 
+  // TOC panel
+  const toc = el('nav', 'toc-panel');
+  toc.id = 'tocPanel';
+  const tocTitle = el('div', 'toc-title');
+  tocTitle.textContent = '目次';
+  toc.appendChild(tocTitle);
+  const tocList = el('div', 'toc-list');
+  toc.appendChild(tocList);
+
   // Main panel
   const main = el('div', 'main-panel');
   main.id = 'mainPanel';
@@ -80,11 +89,24 @@ export function renderReader(container, data, onBack) {
     ${m.title_ja ? `<div class="paper-title-ja">${esc(m.title_ja)}</div>` : ''}`;
   main.appendChild(hdr);
 
+  let secIdx = 0;
   for (const sec of data.sections) {
+    const secId = 'sec-' + secIdx++;
     const sEl = el('div', 'section');
+    sEl.id = secId;
     if (sec.heading) {
       sEl.innerHTML += `<div class="section-heading">${esc(sec.heading)}</div>
         ${sec.heading_ja ? `<div class="section-heading-ja">${esc(sec.heading_ja)}</div>` : ''}`;
+
+      // TOC item
+      const tocItem = el('div', 'toc-item');
+      tocItem.textContent = sec.heading;
+      tocItem.dataset.target = secId;
+      tocItem.addEventListener('click', () => {
+        const target = document.getElementById(secId);
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      tocList.appendChild(tocItem);
     }
     const body = el('div', 'section-body');
 
@@ -161,9 +183,25 @@ export function renderReader(container, data, onBack) {
     </div>
     <div class="keyboard-hint"><kbd>&uarr;</kbd><kbd>&darr;</kbd> 前後の文 &nbsp; <kbd>Esc</kbd> 選択解除</div>`;
 
+  container.appendChild(toc);
   container.appendChild(main);
   container.appendChild(divider);
   container.appendChild(side);
+
+  // Scroll spy — highlight current section in TOC
+  const tocItems = tocList.querySelectorAll('.toc-item');
+  if (tocItems.length) {
+    main.addEventListener('scroll', () => {
+      const scrollTop = main.scrollTop + 100;
+      let activeId = null;
+      for (const sEl of main.querySelectorAll('.section[id]')) {
+        if (sEl.offsetTop <= scrollTop) activeId = sEl.id;
+      }
+      tocItems.forEach(item => {
+        item.classList.toggle('active', item.dataset.target === activeId);
+      });
+    });
+  }
 
   // Tabs
   side.querySelectorAll('.side-tab[data-tab]').forEach(tab => {
