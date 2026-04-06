@@ -1,0 +1,111 @@
+{
+  "metadata": {
+    "title": "Attention Is All You Need",
+    "title_ja": "Attentionこそ全てである",
+    "source_folder": "Attention Is All You Need/"
+  },
+  "glossary": [
+    {"en": "attention mechanism", "ja": "アテンション機構", "note": ""},
+    {"en": "Transformer", "ja": "Transformer", "note": "固有名詞のためカタカナ化しない"},
+    {"en": "encoder", "ja": "エンコーダ", "note": ""},
+    {"en": "decoder", "ja": "デコーダ", "note": ""},
+    {"en": "recurrent neural network", "ja": "リカレントニューラルネットワーク", "note": "RNN"},
+    {"en": "convolutional neural network", "ja": "畳み込みニューラルネットワーク", "note": "CNN"},
+    {"en": "sequence transduction", "ja": "シーケンス変換", "note": ""},
+    {"en": "long short-term memory", "ja": "長短期記憶", "note": "LSTM"},
+    {"en": "hidden state", "ja": "隠れ状態", "note": ""},
+    {"en": "parallelization", "ja": "並列化", "note": ""},
+    {"en": "self-attention", "ja": "自己アテンション", "note": ""},
+    {"en": "machine translation", "ja": "機械翻訳", "note": ""}
+  ],
+  "sections": [
+    {
+      "heading": "Abstract",
+      "heading_ja": "",
+      "sentences": [
+        {
+          "id": "s1",
+          "original": "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks that include an encoder and a decoder.",
+          "translation": "主流のシーケンス変換モデルは、エンコーダとデコーダを含む複雑なリカレントニューラルネットワークまたは畳み込みニューラルネットワークに基づいている。"
+        },
+        {
+          "id": "s2",
+          "original": "The best performing models also connect the encoder and decoder through an attention mechanism.",
+          "translation": "最も性能の高いモデルは、アテンション機構を介してエンコーダとデコーダを接続している。"
+        },
+        {
+          "id": "s3",
+          "original": "We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.",
+          "translation": "我々は、再帰や畳み込みを完全に排除し、アテンション機構のみに基づく新しいシンプルなネットワークアーキテクチャであるTransformerを提案する。"
+        },
+        {
+          "id": "s4",
+          "original": "Experiments on two machine translation tasks show that these models are superior in quality while being more parallelizable and requiring significantly less time to train.",
+          "translation": "2つの機械翻訳タスクにおける実験により、これらのモデルは品質が優れ、かつより並列化可能であり、訓練に必要な時間が大幅に短いことが示された。"
+        }
+      ]
+    },
+    {
+      "heading": "1 Introduction",
+      "heading_ja": "",
+      "sentences": [
+        {
+          "id": "s5",
+          "original": "Recurrent neural networks, long short-term memory and gated recurrent neural networks in particular, have been firmly established as state of the art approaches in sequence modeling and transduction problems such as language modeling and machine translation.",
+          "translation": "リカレントニューラルネットワーク、特に長短期記憶（LSTM）やゲート付きリカレントニューラルネットワークは、言語モデリングや機械翻訳などのシーケンスモデリングおよび変換問題において、最先端のアプローチとして確立されている。"
+        },
+        {
+          "id": "s6",
+          "original": "Numerous efforts have since continued to push the boundaries of recurrent language models and encoder-decoder architectures.",
+          "translation": "それ以来、多くの研究がリカレント言語モデルやエンコーダ・デコーダアーキテクチャの限界を押し広げ続けている。"
+        },
+        {
+          "id": "s7",
+          "original": "Recurrent models typically factor computation along the symbol positions of the input and output sequences.",
+          "translation": "リカレントモデルは通常、入出力シーケンスのシンボル位置に沿って計算を分解する。"
+        },
+        {
+          "id": "s8",
+          "original": "Aligning the positions to steps in computation time, they generate a sequence of hidden states h_t, as a function of the previous hidden state h_{t-1} and the input for position t.",
+          "translation": "位置を計算時間のステップに対応させ、前の隠れ状態 h_{t-1} と位置 t の入力の関数として、隠れ状態の系列 h_t を生成する。"
+        },
+        {
+          "id": "s9",
+          "original": "This inherently sequential nature precludes parallelization within training examples, which becomes critical at longer sequence lengths, as memory constraints limit batching across examples.",
+          "translation": "この本質的に逐次的な性質は、訓練例内での並列化を妨げ、メモリ制約によりバッチ処理が制限されるため、シーケンスが長くなるほど深刻な問題となる。"
+        }
+      ]
+    },
+    {
+      "heading": "2 Background",
+      "heading_ja": "",
+      "sentences": [
+        {
+          "id": "s10",
+          "original": "The goal of reducing sequential computation also forms the foundation of the Extended Neural GPU, ByteNet and ConvS2S, all of which use convolutional neural networks as basic building block.",
+          "translation": "逐次計算を削減するという目標は、Extended Neural GPU、ByteNet、ConvS2Sの基盤でもあり、これらはすべて畳み込みニューラルネットワークを基本構成要素として使用している。"
+        },
+        {
+          "id": "s11",
+          "original": "In these models, the number of operations required to relate signals from two arbitrary input or output positions grows in the distance between positions, linearly for ConvS2S and logarithmically for ByteNet.",
+          "translation": "これらのモデルでは、任意の2つの入出力位置からの信号を関連付けるために必要な演算回数が位置間の距離に応じて増加し、ConvS2Sでは線形に、ByteNetでは対数的に増加する。"
+        },
+        {
+          "id": "s12",
+          "original": "This makes it more difficult to learn dependencies between distant positions.",
+          "translation": "これにより、離れた位置間の依存関係を学習することがより困難になる。"
+        },
+        {
+          "id": "s13",
+          "original": "In the Transformer this is reduced to a constant number of operations, albeit at the cost of reduced effective resolution due to averaging attention-weighted positions, an effect we counteract with Multi-Head Attention.",
+          "translation": "Transformerではこれが一定の演算回数に削減されるが、アテンションで重み付けされた位置を平均化するため有効解像度が低下するという代償がある。この影響をMulti-Head Attentionによって打ち消す。"
+        },
+        {
+          "id": "s14",
+          "original": "Self-attention, sometimes called intra-attention, is an attention mechanism relating different positions of a single sequence in order to compute a representation of the sequence.",
+          "translation": "自己アテンション（intra-attentionとも呼ばれる）は、シーケンスの表現を計算するために、単一シーケンス内の異なる位置を関連付けるアテンション機構である。"
+        }
+      ]
+    }
+  ]
+}

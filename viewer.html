@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper Translator Viewer</title>
+<style>
+:root {
+  --bg: #f8f9fb; --bg-panel: #fff; --bg-hover: #eef3ff; --bg-active: #dbeafe;
+  --text: #1e293b; --text-muted: #64748b; --text-heading: #0f172a;
+  --accent: #2563eb; --accent-light: #93bbfd;
+  --border: #e2e8f0; --border-light: #f1f5f9;
+  --shadow: 0 1px 3px rgba(0,0,0,.08); --radius: 8px;
+  --font-body: 'Segoe UI',system-ui,-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;
+  --font-read: Georgia,'Hiragino Mincho ProN','Yu Mincho',serif;
+  --tr: .15s ease;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#0f172a;--bg-panel:#1e293b;--bg-hover:#1e3a5f;--bg-active:#1e3a5f;
+  --text:#e2e8f0;--text-muted:#94a3b8;--text-heading:#f1f5f9;
+  --accent:#60a5fa;--accent-light:#3b82f6;--border:#334155;--border-light:#1e293b;
+  --shadow:0 1px 3px rgba(0,0,0,.3);
+}}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{font-size:16px}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);line-height:1.6;height:100vh;overflow:hidden}
+.app{display:flex;height:100vh}
+
+/* Welcome */
+.welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem}
+.welcome h1{font-size:1.8rem;color:var(--text-heading);font-weight:700}
+.welcome p{color:var(--text-muted);max-width:480px;text-align:center;line-height:1.7}
+.welcome code{background:var(--bg-hover);padding:.1rem .4rem;border-radius:4px;font-size:.85rem}
+.drop-zone{
+  width:440px;height:220px;border:2px dashed var(--border);border-radius:var(--radius);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;
+  cursor:pointer;transition:border-color var(--tr),background var(--tr);color:var(--text-muted);
+}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:var(--bg-hover)}
+.drop-zone-icon{font-size:2rem;opacity:.5}
+.drop-zone input[type="file"]{display:none}
+.drop-zone-hint{font-size:.75rem;color:var(--text-muted)}
+.drop-formats{display:flex;gap:.5rem;font-size:.7rem;margin-top:.3rem}
+.fmt{padding:.15rem .5rem;border-radius:20px;font-weight:600;border:1px solid var(--border)}
+.fmt.best{color:#10b981;border-color:#6ee7b7}
+.fmt.ok{color:var(--accent);border-color:var(--accent-light)}
+
+/* Main */
+.main-panel{flex:1;overflow-y:auto;padding:2rem 2.5rem;min-width:0}
+.paper-header{margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
+.paper-title{font-size:1.5rem;font-weight:700;color:var(--text-heading);line-height:1.4}
+.paper-title-ja{font-size:1rem;color:var(--text-muted);margin-top:.3rem}
+.section{margin-bottom:2rem}
+.section-heading{font-size:1.2rem;font-weight:700;color:var(--text-heading);margin-bottom:.2rem;padding-top:1rem}
+.section-heading-ja{font-size:.85rem;color:var(--text-muted);margin-bottom:1rem;font-weight:400}
+.section-body{font-family:var(--font-read);font-size:1.05rem;line-height:1.85}
+.sentence{cursor:pointer;transition:background var(--tr),box-shadow var(--tr);border-radius:3px;padding:1px 2px}
+.sentence:hover{background:var(--bg-hover)}
+.sentence.active{background:var(--bg-active);box-shadow:0 0 0 2px var(--accent-light)}
+
+/* Inline figure */
+.paper-figure{text-align:center;margin:1.5rem auto;max-width:100%}
+.paper-figure img{max-width:100%;height:auto;border-radius:var(--radius);box-shadow:var(--shadow)}
+.paper-figure figcaption{font-size:.85rem;color:var(--text-muted);margin-top:.4rem;font-style:italic;font-family:var(--font-body)}
+.paper-figure.placeholder{padding:1.5rem;border:1px dashed var(--border);border-radius:var(--radius);color:var(--text-muted);font-family:var(--font-body);font-size:.9rem}
+
+/* Divider */
+.divider{width:5px;cursor:col-resize;background:var(--border);flex-shrink:0;transition:background var(--tr)}
+.divider:hover,.divider.dragging{background:var(--accent)}
+
+/* Side */
+.side-panel{width:400px;min-width:280px;max-width:600px;background:var(--bg-panel);border-left:1px solid var(--border);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden}
+.side-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.side-tab{flex:1;padding:.7rem 1rem;text-align:center;font-size:.85rem;font-weight:600;color:var(--text-muted);cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;transition:color var(--tr),border-color var(--tr)}
+.side-tab:hover{color:var(--text)}
+.side-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.side-tab-actions{display:flex;align-items:center;padding-right:.5rem;flex-shrink:0}
+.file-btn{font-size:.7rem;padding:.2rem .5rem;background:var(--border-light);color:var(--text-muted);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer}
+.file-btn:hover{background:var(--bg-hover);color:var(--text)}
+.side-content{flex:1;overflow-y:auto;padding:1.2rem}
+.tab-pane{display:none}.tab-pane.active{display:block}
+
+.translation-empty{color:var(--text-muted);font-size:.9rem;text-align:center;padding:2rem 1rem}
+.translation-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:.4rem}
+.translation-original{font-family:var(--font-read);font-size:.95rem;line-height:1.7;color:var(--text);padding:.8rem;background:var(--bg);border-radius:var(--radius);margin-bottom:1rem;border-left:3px solid var(--accent)}
+.translation-text{font-size:1.05rem;line-height:1.8;color:var(--text-heading);padding:.8rem;background:var(--bg);border-radius:var(--radius);border-left:3px solid #10b981}
+.copy-btn{margin-top:.5rem;font-size:.75rem;padding:.2rem .5rem;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer}
+.copy-btn:hover{color:var(--text);background:var(--bg)}
+
+.matched-terms{margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)}
+.matched-terms-title{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:.5rem}
+.term-chip{display:inline-flex;align-items:baseline;gap:.3rem;padding:.25rem .6rem;margin:.2rem .15rem;background:var(--bg);border:1px solid var(--border);border-radius:20px;font-size:.8rem}
+.term-en{color:var(--accent);font-weight:600}.term-ja{color:var(--text)}
+.term-note{color:var(--text-muted);font-size:.7rem;margin-left:.2rem}
+
+.history-section{border-top:1px solid var(--border);padding-top:1rem}
+.history-title{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:.8rem}
+.history-item{padding:.6rem .8rem;border-radius:var(--radius);margin-bottom:.5rem;cursor:pointer;transition:background var(--tr);border:1px solid var(--border-light)}
+.history-item:hover{background:var(--bg-hover)}
+.history-original{font-size:.8rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-translation{font-size:.85rem;color:var(--text);margin-top:.2rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+.glossary-search{width:100%;padding:.5rem .8rem;margin-bottom:1rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:.85rem;outline:none}
+.glossary-search:focus{border-color:var(--accent)}
+.glossary-search::placeholder{color:var(--text-muted)}
+.glossary-table{width:100%;border-collapse:collapse;font-size:.85rem}
+.glossary-table th{text-align:left;padding:.4rem .6rem;border-bottom:2px solid var(--border);color:var(--text-muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em}
+.glossary-table td{padding:.5rem .6rem;border-bottom:1px solid var(--border-light);vertical-align:top}
+.glossary-table tr:hover td{background:var(--bg-hover)}
+.glossary-table .gl-en{color:var(--accent);font-weight:600}
+.glossary-table .gl-note{color:var(--text-muted);font-size:.8rem}
+.glossary-empty{text-align:center;color:var(--text-muted);padding:2rem 1rem;font-size:.9rem}
+
+.keyboard-hint{padding:.6rem 1.2rem;border-top:1px solid var(--border);font-size:.7rem;color:var(--text-muted);flex-shrink:0}
+kbd{padding:.1rem .35rem;background:var(--bg);border:1px solid var(--border);border-radius:3px;font-size:.7rem;font-family:monospace}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="welcome" id="welcomeScreen">
+    <h1>Paper Translator Viewer</h1>
+    <p><code>/paper-translate</code> の出力フォルダをドロップすると、文をクリックして日本語訳を確認できます。</p>
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-zone-icon">DROP</div>
+      <div>フォルダ or ファイルをドラッグ＆ドロップ</div>
+      <div class="drop-zone-hint">または クリックしてファイルを選択</div>
+      <div class="drop-formats">
+        <span class="fmt best">フォルダ（画像付き）</span>
+        <span class="fmt ok">.md ファイル</span>
+        <span class="fmt ok">.json</span>
+      </div>
+      <input type="file" id="fileInput" accept=".json,.md,.png,.jpg,.jpeg,.gif,.webp,.svg" multiple>
+      <input type="file" id="folderInput" webkitdirectory style="display:none">
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  Markdown → Data Converter
+// ============================================================
+const ABBREVS = new Set(['e.g.','i.e.','et al.','etc.','Fig.','Figs.','Eq.','Eqs.','Sec.','Ref.','Refs.','Tab.','vs.','Dr.','Mr.','Mrs.','Prof.','Jr.','Sr.','approx.','dept.','vol.','no.','pp.','ed.','cf.','ibid.','resp.','incl.','est.']);
+
+function parseMdSections(text) {
+  const lines = text.split('\n'), out = [];
+  let h = '', lv = 0, buf = [];
+  for (const l of lines) {
+    const m = l.match(/^(#{1,4})\s+(.*)/);
+    if (m) { const b = buf.join('\n').trim(); if (b || h) out.push({heading:h,level:lv,text:b}); lv=m[1].length; h=m[2].trim(); buf=[]; }
+    else buf.push(l);
+  }
+  const b = buf.join('\n').trim(); if (b || h) out.push({heading:h,level:lv,text:b});
+  return out;
+}
+
+function isImg(l){ return /^\s*!\[/.test(l) }
+function isTbl(l){ const s=l.trim(); return s.startsWith('|')&&s.endsWith('|') }
+
+// Split section body into ordered blocks: {type:'text',text} or {type:'image',alt,src,width}
+function splitBlocks(text) {
+  const raws = text.split(/\n\s*\n/), blocks = [];
+  for (const raw of raws) {
+    const t = raw.trim(); if (!t) continue;
+    const lines = t.split('\n'); let txtBuf = [];
+    for (const l of lines) {
+      const im = l.match(/^\s*!\[(.*?)\]\((.*?)\)(?:\{width=(\d+)%\})?/);
+      if (im) {
+        if (txtBuf.length) { const tx = txtBuf.filter(x=>x.trim()&&!isTbl(x)).map(x=>x.trim()).join(' '); if(tx) blocks.push({type:'text',text:tx}); txtBuf=[]; }
+        blocks.push({type:'image',alt:im[1],src:im[2],width:im[3]?im[3]+'%':'80%'});
+      } else if (l.trim() && !isTbl(l)) txtBuf.push(l);
+    }
+    if (txtBuf.length) { const tx=txtBuf.map(x=>x.trim()).join(' '); if(tx) blocks.push({type:'text',text:tx}); }
+  }
+  return blocks;
+}
+
+// Split section body into text-only paragraphs (for Japanese side)
+function splitParas(text) {
+  return text.split(/\n\s*\n/).map(p=>p.trim()).filter(Boolean)
+    .map(p => p.split('\n').filter(l=>l.trim()&&!isImg(l)&&!isTbl(l)).map(l=>l.trim()).join(' '))
+    .filter(Boolean);
+}
+
+function splitEn(text) {
+  if (!text.trim()) return [];
+  let s = text;
+  for (const a of ABBREVS) s = s.replaceAll(a, a.replaceAll('.', '\x00'));
+  return s.split(/(?<=[.!?])\s+(?=[A-Z"'\(\[])/).map(p=>p.replaceAll('\x00','.').trim()).filter(Boolean);
+}
+function splitJa(text) {
+  if (!text.trim()) return [];
+  return text.split(/(?<=[。．])\s*/).map(s=>s.trim()).filter(Boolean);
+}
+
+function align(en, ja) {
+  if (!en.length&&!ja.length) return [];
+  if (!en.length) return ja.map(s=>['',s]);
+  if (!ja.length) return en.map(s=>[s,'']);
+  if (en.length===ja.length) return en.map((e,i)=>[e,ja[i]]);
+  if (Math.abs(en.length-ja.length)<=2) {
+    const p=[], mn=Math.min(en.length,ja.length);
+    for(let i=0;i<mn;i++) p.push([en[i],ja[i]]);
+    for(let i=mn;i<en.length;i++) p.push([en[i],'']);
+    if(ja.length>mn&&p.length){ const x=ja.slice(mn).join(' '),l=p[p.length-1]; p[p.length-1]=[l[0],l[1]?l[1]+' '+x:x]; }
+    return p;
+  }
+  return [[en.join(' '),ja.join(' ')]];
+}
+
+function parseGlossary(text) {
+  const g=[];
+  for(const l of text.split('\n')){
+    const m=l.match(/\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.*?)\s*\|/);
+    if(!m)continue; const en=m[1].trim(),ja=m[2].trim(),note=m[3].trim();
+    if(/^(english|---|-+|\s*)$/i.test(en)||/^-+$/.test(en))continue;
+    g.push({en,ja,note});
+  }
+  return g;
+}
+
+function convertMd(enText, jaText, glossaryText, imageMap={}) {
+  const enSecs = parseMdSections(enText);
+  const jaSecs = parseMdSections(jaText);
+  const gl = glossaryText ? parseGlossary(glossaryText) : [];
+  const title = enSecs.length ? enSecs[0].heading : 'Untitled';
+  const jaByH = {}; for(const s of jaSecs) jaByH[s.heading]=s;
+
+  const sections = []; let cnt = 1;
+  for (const es of enSecs) {
+    const js = jaByH[es.heading];
+    const enBlocks = splitBlocks(es.text);
+    const jaParas = js ? splitParas(js.text) : [];
+    const content = []; let jpi = 0;
+
+    for (const blk of enBlocks) {
+      if (blk.type === 'image') {
+        const src = imageMap[blk.src] || imageMap['images/'+blk.src.split('/').pop()] || '';
+        content.push({type:'image', src, alt:blk.alt, width:blk.width});
+      } else {
+        const eS = splitEn(blk.text);
+        const jT = jpi < jaParas.length ? jaParas[jpi] : ''; jpi++;
+        const jS = splitJa(jT);
+        for (const [o,t] of align(eS,jS)) {
+          if (!o) continue;
+          content.push({type:'sentence',id:'s'+cnt++, original:o, translation:t||'（対応する訳なし）'});
+        }
+      }
+    }
+    if (content.length) sections.push({heading:es.heading, heading_ja:'', content});
+  }
+  return { metadata:{title, title_ja:''}, glossary:gl, sections };
+}
+
+// ============================================================
+//  File / Folder Handling
+// ============================================================
+let paperData=null, selectedId=null, sentenceMap={}, sentenceIds=[], glossary=[], history=[];
+const MAX_HIST=30, app=document.getElementById('app');
+
+// --- Drop zone ---
+const dropZone=document.getElementById('dropZone');
+const fileInput=document.getElementById('fileInput');
+const folderInput=document.getElementById('folderInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => handleFileList(e.target.files));
+folderInput.addEventListener('change', e => handleFolderInput(e.target.files));
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleDrop(e); });
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => { e.preventDefault(); if(e.dataTransfer.items.length) handleDrop(e); });
+
+async function handleDrop(e) {
+  const items = e.dataTransfer.items;
+  if (!items || !items.length) { handleFileList(e.dataTransfer.files); return; }
+
+  // Check for directory entries
+  const fileInfos = [];
+  const dirEntries = [];
+  for (const item of items) {
+    const entry = item.webkitGetAsEntry?.();
+    if (entry?.isDirectory) dirEntries.push(entry);
+    else if (entry?.isFile) {
+      const f = await fileFromEntry(entry);
+      fileInfos.push({file:f, path:entry.name});
+    }
+  }
+
+  if (dirEntries.length) {
+    for (const dir of dirEntries) fileInfos.push(...await readDirRecursive(dir));
+  }
+
+  if (fileInfos.length) processFileSet(fileInfos);
+  else handleFileList(e.dataTransfer.files);
+}
+
+function handleFileList(fileList) {
+  const infos = Array.from(fileList).map(f => ({file:f, path:f.name}));
+  processFileSet(infos);
+}
+
+function handleFolderInput(fileList) {
+  // webkitdirectory gives files with webkitRelativePath like "FolderName/paper.md"
+  const infos = Array.from(fileList).map(f => {
+    const parts = f.webkitRelativePath.split('/');
+    const path = parts.slice(1).join('/') || f.name; // strip root folder
+    return {file:f, path};
+  });
+  processFileSet(infos);
+}
+
+// --- Directory reading ---
+function readEntries(reader) {
+  return new Promise((res,rej) => {
+    const all=[];
+    const batch = () => reader.readEntries(entries => {
+      if(!entries.length){ res(all); return; }
+      all.push(...entries); batch();
+    }, rej);
+    batch();
+  });
+}
+function fileFromEntry(entry) {
+  return new Promise((res,rej) => entry.file(res,rej));
+}
+async function readDirRecursive(dirEntry, prefix='') {
+  const results=[], entries = await readEntries(dirEntry.createReader());
+  for (const e of entries) {
+    const p = prefix ? prefix+'/'+e.name : e.name;
+    if (e.isFile) { const f=await fileFromEntry(e); results.push({file:f,path:p}); }
+    else if (e.isDirectory) results.push(...await readDirRecursive(e,p));
+  }
+  return results;
+}
+
+// --- Unified processing ---
+async function processFileSet(infos) {
+  try {
+    // JSON?
+    const jsonInfo = infos.find(i => i.path.endsWith('.json') && !i.path.includes('meta.json'));
+    if (jsonInfo) {
+      const text = await readText(jsonInfo.file);
+      const data = JSON.parse(text);
+      if (data.sections) { paperData=data; renderPaper(data); return; }
+    }
+
+    // MD files
+    const enInfo = infos.find(i => /(?:^|[/\\])paper\.md$/i.test(i.path))
+      || infos.find(i => i.path.endsWith('.md') && !i.path.includes('.ja.') && !i.path.includes('glossary') && !i.path.includes('summary'));
+    const jaInfo = infos.find(i => /(?:^|[/\\])paper\.ja\.md$/i.test(i.path))
+      || infos.find(i => i.path.endsWith('.ja.md') && !i.path.includes('summary'));
+    const glInfo = infos.find(i => i.path.includes('glossary') && i.path.endsWith('.md'));
+
+    if (!enInfo || !jaInfo) {
+      alert('paper.md と paper.ja.md が見つかりません。\n出力フォルダをまとめてドロップしてください。');
+      return;
+    }
+
+    // Read images
+    const imageMap = {};
+    const imgInfos = infos.filter(i => /\.(png|jpe?g|gif|svg|webp)$/i.test(i.path));
+    await Promise.all(imgInfos.map(async i => {
+      const url = await readDataURL(i.file);
+      imageMap[i.path] = url;
+      // Also register with images/ prefix for flexible matching
+      const name = i.path.split('/').pop();
+      if (!imageMap['images/'+name]) imageMap['images/'+name] = url;
+    }));
+
+    const [enText, jaText, glText] = await Promise.all([
+      readText(enInfo.file), readText(jaInfo.file),
+      glInfo ? readText(glInfo.file) : '',
+    ]);
+
+    const data = convertMd(enText, jaText, glText, imageMap);
+    paperData = data;
+    renderPaper(data);
+  } catch(err) {
+    alert('読み込みエラー: ' + err.message);
+    console.error(err);
+  }
+}
+
+function readText(file) { return new Promise((r,j)=>{ const R=new FileReader(); R.onload=()=>r(R.result); R.onerror=()=>j(R.error); R.readAsText(file); }); }
+function readDataURL(file) { return new Promise((r,j)=>{ const R=new FileReader(); R.onload=()=>r(R.result); R.onerror=()=>j(R.error); R.readAsDataURL(file); }); }
+
+// ============================================================
+//  Rendering
+// ============================================================
+function renderPaper(data) {
+  sentenceMap={}; sentenceIds=[]; selectedId=null; history=[];
+  glossary = data.glossary || [];
+
+  // Normalize: support both content[] and legacy sentences[]
+  for (const sec of data.sections) {
+    if (!sec.content) {
+      sec.content = (sec.sentences||[]).map(s => ({type:'sentence',...s}));
+    }
+  }
+
+  for (const sec of data.sections)
+    for (const it of sec.content)
+      if (it.type!=='image') { sentenceMap[it.id]=it; sentenceIds.push(it.id); }
+
+  app.innerHTML='';
+
+  // Main
+  const main = el('div','main-panel'); main.id='mainPanel';
+  const hdr = el('div','paper-header');
+  const m = data.metadata||{};
+  hdr.innerHTML = `<div class="paper-title">${esc(m.title||'Untitled')}</div>
+    ${m.title_ja?`<div class="paper-title-ja">${esc(m.title_ja)}</div>`:''}`;
+  main.appendChild(hdr);
+
+  for (const sec of data.sections) {
+    const sEl = el('div','section');
+    if (sec.heading) {
+      sEl.innerHTML += `<div class="section-heading">${esc(sec.heading)}</div>
+        ${sec.heading_ja?`<div class="section-heading-ja">${esc(sec.heading_ja)}</div>`:''}`;
+    }
+    const body = el('div','section-body');
+
+    for (const it of sec.content) {
+      if (it.type === 'image') {
+        const fig = document.createElement('figure');
+        fig.className = 'paper-figure';
+        if (it.src) {
+          const img = document.createElement('img');
+          img.src = it.src;
+          img.alt = it.alt || '';
+          img.style.maxWidth = it.width || '80%';
+          img.onerror = () => { fig.className='paper-figure placeholder'; fig.textContent=it.alt||'[Image]'; };
+          fig.appendChild(img);
+          if (it.alt && !/^!\[/.test(it.alt)) {
+            const cap = document.createElement('figcaption');
+            cap.textContent = it.alt;
+            fig.appendChild(cap);
+          }
+        } else {
+          fig.className = 'paper-figure placeholder';
+          fig.textContent = it.alt || '[Image]';
+        }
+        body.appendChild(fig);
+      } else {
+        const span = document.createElement('span');
+        span.className='sentence'; span.dataset.id=it.id;
+        span.textContent=it.original+' ';
+        span.addEventListener('click',()=>selectSentence(it.id));
+        body.appendChild(span);
+      }
+    }
+    sEl.appendChild(body); main.appendChild(sEl);
+  }
+
+  const divider = el('div','divider');
+  const side = el('div','side-panel'); side.id='sidePanel';
+  const hasGl = glossary.length>0;
+
+  side.innerHTML = `
+    <div class="side-tabs">
+      <button class="side-tab active" data-tab="translation">翻訳</button>
+      ${hasGl?'<button class="side-tab" data-tab="glossary">用語集</button>':''}
+      <div class="side-tab-actions"><button class="file-btn" id="reloadBtn">別のファイル</button></div>
+    </div>
+    <div class="side-content" id="sideContent">
+      <div class="tab-pane active" id="paneTranslation">
+        <div class="translation-empty" id="trEmpty">文をクリックすると<br>ここに翻訳が表示されます</div>
+        <div id="trCurrent" style="display:none">
+          <div class="translation-label">原文</div>
+          <div class="translation-original" id="trOrig"></div>
+          <div class="translation-label">翻訳</div>
+          <div class="translation-text" id="trText"></div>
+          <button class="copy-btn" id="copyBtn">コピー</button>
+          <div class="matched-terms" id="matchTerms" style="display:none">
+            <div class="matched-terms-title">関連用語</div>
+            <div id="matchList"></div>
+          </div>
+        </div>
+        <div class="history-section" id="histSec" style="display:none">
+          <div class="history-title">履歴</div><div id="histList"></div>
+        </div>
+      </div>
+      ${hasGl?`<div class="tab-pane" id="paneGlossary">
+        <input type="text" class="glossary-search" id="glSearch" placeholder="用語を検索...">
+        <div id="glWrap"></div>
+      </div>`:''}
+    </div>
+    <div class="keyboard-hint"><kbd>&uarr;</kbd><kbd>&darr;</kbd> 前後の文 &nbsp; <kbd>Esc</kbd> 選択解除</div>`;
+
+  app.appendChild(main); app.appendChild(divider); app.appendChild(side);
+
+  // Tabs
+  side.querySelectorAll('.side-tab[data-tab]').forEach(tab=>{
+    tab.addEventListener('click',()=>{
+      side.querySelectorAll('.side-tab').forEach(t=>t.classList.remove('active'));
+      side.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('pane'+cap(tab.dataset.tab))?.classList.add('active');
+    });
+  });
+
+  document.getElementById('reloadBtn').addEventListener('click',()=>{
+    const i=document.createElement('input'); i.type='file'; i.accept='.json,.md,.png,.jpg,.jpeg,.gif,.webp,.svg'; i.multiple=true;
+    i.addEventListener('change',e=>handleFileList(e.target.files)); i.click();
+  });
+  document.getElementById('copyBtn').addEventListener('click',()=>{
+    if(selectedId&&sentenceMap[selectedId]){
+      navigator.clipboard.writeText(sentenceMap[selectedId].translation);
+      const b=document.getElementById('copyBtn'); b.textContent='コピー済み'; setTimeout(()=>b.textContent='コピー',1200);
+    }
+  });
+  if(hasGl){
+    renderGl(glossary);
+    document.getElementById('glSearch').addEventListener('input',e=>{
+      const q=e.target.value.toLowerCase();
+      renderGl(glossary.filter(g=>g.en.toLowerCase().includes(q)||g.ja.includes(q)||(g.note&&g.note.includes(q))));
+    });
+  }
+  setupDivider(divider,side);
+}
+
+function renderGl(items){
+  const w=document.getElementById('glWrap');
+  if(!items.length){w.innerHTML='<div class="glossary-empty">該当なし</div>';return;}
+  w.innerHTML='<table class="glossary-table"><thead><tr><th>English</th><th>日本語</th><th>備考</th></tr></thead><tbody>'
+    +items.map(g=>`<tr><td class="gl-en">${esc(g.en)}</td><td>${esc(g.ja)}</td><td class="gl-note">${esc(g.note||'')}</td></tr>`).join('')
+    +'</tbody></table>';
+}
+function matchTerms(s){ if(!glossary.length)return[]; const t=s.original.toLowerCase(); return glossary.filter(g=>t.includes(g.en.toLowerCase())); }
+
+// ============================================================
+//  Interaction
+// ============================================================
+function selectSentence(id){
+  if(!sentenceMap[id])return;
+  document.querySelector('.sentence.active')?.classList.remove('active');
+  const e=document.querySelector(`.sentence[data-id="${id}"]`);
+  if(e){ e.classList.add('active'); const r=e.getBoundingClientRect(),p=document.getElementById('mainPanel').getBoundingClientRect(); if(r.top<p.top||r.bottom>p.bottom)e.scrollIntoView({behavior:'smooth',block:'center'}); }
+  selectedId=id;
+  showTr(sentenceMap[id]); addHist(sentenceMap[id]);
+  const sp=document.getElementById('sidePanel');
+  sp?.querySelectorAll('.side-tab').forEach(t=>t.classList.remove('active'));
+  sp?.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  sp?.querySelector('.side-tab[data-tab="translation"]')?.classList.add('active');
+  document.getElementById('paneTranslation')?.classList.add('active');
+}
+
+function showTr(s){
+  document.getElementById('trEmpty').style.display='none';
+  document.getElementById('trCurrent').style.display='block';
+  document.getElementById('trOrig').textContent=s.original;
+  document.getElementById('trText').textContent=s.translation;
+  const mt=matchTerms(s),el2=document.getElementById('matchTerms'),ml=document.getElementById('matchList');
+  if(mt.length){ el2.style.display='block'; ml.innerHTML=mt.map(g=>`<span class="term-chip"><span class="term-en">${esc(g.en)}</span><span class="term-ja">${esc(g.ja)}</span>${g.note?`<span class="term-note">(${esc(g.note)})</span>`:''}</span>`).join(''); }
+  else el2.style.display='none';
+}
+
+function addHist(s){ if(history.length&&history[0].id===s.id)return; history.unshift(s); if(history.length>MAX_HIST)history.pop(); renderHist(); }
+function renderHist(){
+  const sec=document.getElementById('histSec'),list=document.getElementById('histList');
+  if(history.length<=1){sec.style.display='none';return;}
+  sec.style.display='block'; list.innerHTML='';
+  for(let i=1;i<history.length;i++){
+    const it=history[i],d=document.createElement('div'); d.className='history-item';
+    d.innerHTML=`<div class="history-original">${esc(it.original)}</div><div class="history-translation">${esc(it.translation)}</div>`;
+    d.addEventListener('click',()=>selectSentence(it.id)); list.appendChild(d);
+  }
+}
+
+document.addEventListener('keydown',e=>{
+  if(!paperData||e.target.tagName==='INPUT')return;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault();
+    const idx=selectedId?sentenceIds.indexOf(selectedId):-1;
+    const next=e.key==='ArrowDown'?Math.min(idx+1,sentenceIds.length-1):Math.max(idx-1,0);
+    selectSentence(sentenceIds[next]);
+  }
+  if(e.key==='Escape'){
+    selectedId=null;
+    document.querySelector('.sentence.active')?.classList.remove('active');
+    document.getElementById('trEmpty').style.display='block';
+    document.getElementById('trCurrent').style.display='none';
+    document.getElementById('matchTerms').style.display='none';
+  }
+});
+
+function setupDivider(div,side){
+  let d=false;
+  div.addEventListener('mousedown',e=>{d=true;div.classList.add('dragging');document.body.style.cursor='col-resize';document.body.style.userSelect='none';e.preventDefault();});
+  document.addEventListener('mousemove',e=>{if(!d)return;side.style.width=Math.max(280,Math.min(600,document.body.clientWidth-e.clientX-2))+'px';});
+  document.addEventListener('mouseup',()=>{if(d){d=false;div.classList.remove('dragging');document.body.style.cursor='';document.body.style.userSelect='';}});
+}
+
+function el(tag,cls){const e=document.createElement(tag);e.className=cls;return e;}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+</script>
+</body>
+</html>
