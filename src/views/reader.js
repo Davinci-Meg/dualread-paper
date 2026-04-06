@@ -5,6 +5,7 @@
 
 import { el, esc, cap } from '../lib/converter.js';
 import { getFontSize, setFontSize } from '../lib/store.js';
+import { lookupWords } from '../lib/dictionary.js';
 
 let paperData = null;
 let currentFontSize = 16;
@@ -144,6 +145,10 @@ export function renderReader(container, data, onBack) {
             <div class="matched-terms-title">関連用語</div>
             <div id="matchList"></div>
           </div>
+          <div class="word-list" id="wordList" style="display:none">
+            <div class="word-list-title">単語</div>
+            <div class="word-list-grid" id="wordGrid"></div>
+          </div>
         </div>
         <div class="history-section" id="histSec" style="display:none">
           <div class="history-title">履歴</div><div id="histList"></div>
@@ -257,6 +262,18 @@ function showTr(s) {
     ).join('');
   } else {
     mtEl.style.display = 'none';
+  }
+
+  // 単語リスト
+  const words = lookupWords(s.original, glossary);
+  const wlEl = document.getElementById('wordList'), wgEl = document.getElementById('wordGrid');
+  if (words.length) {
+    wlEl.style.display = 'block';
+    wgEl.innerHTML = words.map(w =>
+      `<div class="word-entry${w.source === 'glossary' ? ' from-glossary' : ''}"><span class="word-en">${esc(w.word)}</span><span class="word-ja">${esc(w.ja)}</span></div>`
+    ).join('');
+  } else {
+    wlEl.style.display = 'none';
   }
 }
 

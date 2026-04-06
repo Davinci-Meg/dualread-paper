@@ -640,6 +640,54 @@ body {
 .term-ja { color: var(--text); }
 .term-note { color: var(--text-tertiary); font-size: 0.7rem; margin-left: 0.2rem; }
 
+/* Word list */
+.word-list {
+  margin-top: 1rem; padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+.word-list-title {
+  font-size: 0.65rem; font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  margin-bottom: 0.5rem;
+}
+.word-list-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+}
+.word-entry {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: var(--radius-sm);
+  transition: background var(--tr);
+  min-width: 0;
+}
+.word-entry:hover {
+  background: var(--bg-hover);
+}
+.word-en {
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.word-ja {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.word-entry.from-glossary .word-en {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
 /* History */
 .history-section {
   border-top: 1px solid var(--border);
