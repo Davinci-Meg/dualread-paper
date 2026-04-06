@@ -108,6 +108,10 @@ Frontend (Vanilla JS + Vite)        Backend (Rust + Tauri v2)
 └── src/lib/store.js      設定永続化
 ```
 
+## サポート
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/megumu)
+
 ## ライセンス
 
-MIT
+Apache-2.0
